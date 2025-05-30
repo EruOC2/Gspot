@@ -1,10 +1,11 @@
-import React from 'react';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import React from "react";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Ionicons } from "@expo/vector-icons";
 
-import HomeScreen from '../screens/HomeScreen';
-import ProfileScreen from '../screens/ProfileScreen';
-import FriendsScreen from '../screens/FriendsScreen';
+import HomeFeed from "../screens/HomeFeed";
+import UploadSpot from "../screens/UploadSpot";
+import ProfileScreen from "../screens/ProfileScreen";
+import MapScreen from "../screens/MapScreen"; // NUEVO
 
 const Tab = createBottomTabNavigator();
 
@@ -13,25 +14,28 @@ export default function BottomTabsNavigator() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
+        tabBarActiveTintColor: "#FF3366",
+        tabBarInactiveTintColor: "gray",
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
 
-          if (route.name === 'Inicio') {
-            iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'Amigos') {
-            iconName = focused ? 'people' : 'people-outline';
-          } else if (route.name === 'Perfil') {
-            iconName = focused ? 'person' : 'person-outline';
+          if (route.name === "Inicio") {
+            iconName = focused ? "home" : "home-outline";
+          } else if (route.name === "Subir") {
+            iconName = focused ? "cloud-upload" : "cloud-upload-outline";
+          } else if (route.name === "Perfil") {
+            iconName = focused ? "person" : "person-outline";
+          } else if (route.name === "Mapa") {
+            iconName = focused ? "map" : "map-outline";
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: 'tomato',
-        tabBarInactiveTintColor: 'gray',
       })}
     >
-      <Tab.Screen name="Inicio" component={HomeScreen} />
-      <Tab.Screen name="Amigos" component={FriendsScreen} />
+      <Tab.Screen name="Inicio" component={HomeFeed} />
+      <Tab.Screen name="Subir" component={UploadSpot} />
+      <Tab.Screen name="Mapa" component={MapScreen} /> 
       <Tab.Screen name="Perfil" component={ProfileScreen} />
     </Tab.Navigator>
   );
