@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = 'http://192.168.0.33:3000'; 
+const BASE_URL = 'https://gspot-backend.onrender.com'; 
 
 
 export const register = async (email, password) => {
