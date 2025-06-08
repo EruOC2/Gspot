@@ -68,7 +68,7 @@ export default function SpotDetailsScreen({ route }) {
       setSpotData(updatedSpot);
       setLiked(result.liked);
 
-      // Actualiza también el contexto global
+      
       updateSpotLikes(id, result.likes, user?.email);
     } catch (err) {
       Alert.alert("Error", "No se pudo dar/quitar like.");

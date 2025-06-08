@@ -16,7 +16,7 @@ import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { uploadStory } from "../api/api";
 import { useAuth } from "../../context/AuthContext";
-import { SpotContext } from "../../context/SpotContext"; // ✅ Importar contexto
+import { SpotContext } from "../../context/SpotContext"; 
 
 export default function UploadSpot() {
   const [image, setImage] = useState(null);
@@ -25,7 +25,7 @@ export default function UploadSpot() {
   const [tags, setTags] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const { refreshSpots } = useContext(SpotContext); // ✅ Usar contexto
+  const { refreshSpots } = useContext(SpotContext); 
 
   const navigation = useNavigation();
   const { user } = useAuth();
@@ -97,7 +97,7 @@ export default function UploadSpot() {
       const token = await AsyncStorage.getItem("token");
       await uploadStory(formData, token);
 
-      await refreshSpots(); // ✅ Actualizar lista de spots
+      await refreshSpots(); 
 
       Alert.alert("¡Listo!", "Spot subido correctamente");
       setImage(null);

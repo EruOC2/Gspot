@@ -10,7 +10,7 @@ export default function decodeToken(token) {
     );
     return JSON.parse(jsonPayload);
   } catch (error) {
-    console.error('❌ Error al decodificar token JWT:', error);
+    console.error(' Error al decodificar token JWT:', error);
     return null;
   }
 }

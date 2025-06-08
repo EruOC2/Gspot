@@ -1,6 +1,6 @@
 const Story = require('../models/Story');
 
-// Obtener todas las historias
+
 exports.getAllStories = async (req, res) => {
   try {
     const stories = await Story.find();
@@ -15,7 +15,7 @@ exports.getAllStories = async (req, res) => {
   }
 };
 
-// Obtener una historia por ID ✅
+
 exports.getStoryById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -33,7 +33,7 @@ exports.getStoryById = async (req, res) => {
   }
 };
 
-// Crear una nueva historia
+
 exports.createStory = async (req, res) => {
   try {
     const user = req.user?.email;
@@ -65,7 +65,7 @@ exports.createStory = async (req, res) => {
   }
 };
 
-// Actualizar una historia existente
+
 exports.updateStory = async (req, res) => {
   try {
     const { id } = req.params;
@@ -83,7 +83,7 @@ exports.updateStory = async (req, res) => {
   }
 };
 
-// Eliminar una historia
+
 exports.deleteStory = async (req, res) => {
   try {
     const { id } = req.params;
@@ -100,7 +100,7 @@ exports.deleteStory = async (req, res) => {
   }
 };
 
-// Dar / quitar like a una historia
+
 exports.likeStory = async (req, res) => {
   try {
     const { id } = req.params;

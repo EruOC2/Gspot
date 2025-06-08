@@ -3,7 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const {
   getAllStories,
-  getStoryById,     // ✅ Agregado
+  getStoryById,     
   createStory,
   updateStory,
   deleteStory,
@@ -13,7 +13,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-// Configuración de almacenamiento para multer
+
 const storage = multer.diskStorage({
   destination: 'uploads/',
   filename: (req, file, cb) => {
@@ -25,7 +25,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// 📌 Rutas
+
 router.get('/', getAllStories);
 router.get('/:id', authMiddleware, getStoryById); // ✅ Nueva ruta añadida
 router.post('/', authMiddleware, upload.single('image'), createStory);

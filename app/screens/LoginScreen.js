@@ -19,7 +19,7 @@ export default function LoginScreen() {
     try {
       const data = await login(email, password);
       await AsyncStorage.setItem('token', data.token);
-      refresh(); // actualiza el estado global
+      refresh(); 
     } catch (error) {
       console.error(error);
       Alert.alert('Error al iniciar sesión', error.response?.data?.message || 'Credenciales inválidas');

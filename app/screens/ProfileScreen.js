@@ -34,7 +34,7 @@ export default function ProfileScreen() {
       await deleteSpot(id, token);
       await refreshSpots();
       setDeletingId(null);
-      Alert.alert("✅ Eliminado", "El spot ha sido eliminado exitosamente");
+      Alert.alert(" Eliminado", "El spot ha sido eliminado exitosamente");
     } catch (err) {
       setDeletingId(null);
       console.error(err);

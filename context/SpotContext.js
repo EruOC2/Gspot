@@ -70,7 +70,7 @@ export const SpotProvider = ({ children }) => {
     );
   };
 
-  // Función auxiliar para extraer el email desde el token
+  
   const parseJwt = (token) => {
     if (!token) return {};
     try {

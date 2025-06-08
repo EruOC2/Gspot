@@ -17,7 +17,7 @@ export default function RegisterScreen() {
     try {
       const data = await register(email, password);
       await AsyncStorage.setItem('token', data.token);
-      refresh(); // actualiza el estado global y redirige automáticamente
+      refresh(); 
     } catch (error) {
       console.error(error);
       Alert.alert('Error al registrar', error.response?.data?.message || 'Error');
