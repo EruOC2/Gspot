@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   View,
   Text,
@@ -7,18 +7,57 @@ import {
   Image,
   TouchableOpacity,
   Dimensions,
+  Button,
+  Alert,
 } from "react-native";
 import { useFavorites } from "../../context/FavoriteContext";
 import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const placeholderImage =
-  "https://via.placeholder.com/300x200.png?text=Sin+imagen";
+const placeholderImage = "https://via.placeholder.com/300x200.png?text=Sin+imagen";
 
 export default function Favoritos() {
-  const { favorites } = useFavorites();
+  const { favorites, removeFromFavorites, forceCleanFavorites } = useFavorites();
   const navigation = useNavigation();
 
-  // Limpieza de favoritos inválidos
+  useEffect(() => {
+    const clean = async () => {
+      await forceCleanFavorites();
+    };
+    clean();
+  }, []);
+
+  const handlePress = async (spot) => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const res = await fetch(`http://192.168.0.33:3000/stories/${spot._id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.status === 404) {
+        Alert.alert("Este spot ya no existe", "Se eliminará de tus favoritos.");
+        removeFromFavorites(spot);
+        return;
+      }
+
+      const data = await res.json();
+      console.log("Spot desde backend:", data);
+
+      if (!data || !data._id || !data.placeName) {
+        Alert.alert("Error", "El spot está incompleto.");
+        removeFromFavorites(spot);
+        return;
+      }
+
+      navigation.navigate("SpotDetails", { spot: data });
+    } catch (err) {
+      console.error("Error al obtener spot:", err);
+      Alert.alert("Error al cargar el spot", "No se pudo acceder al spot. Revisa tu conexión.");
+    }
+  };
+
   const validFavorites = favorites.filter(
     (item) => item && item._id && item.placeName
   );
@@ -28,6 +67,13 @@ export default function Favoritos() {
       <View style={styles.centered}>
         <Text style={styles.title}>Mis spots guardados</Text>
         <Text style={styles.emptyText}>Aún no has guardado ningún spot.</Text>
+        <Button
+          title="Borrar favoritos"
+          onPress={async () => {
+            await AsyncStorage.removeItem("favoritos");
+            Alert.alert("Favoritos limpiados");
+          }}
+        />
       </View>
     );
   }
@@ -49,16 +95,20 @@ export default function Favoritos() {
             : { uri: placeholderImage };
 
           return (
-            <TouchableOpacity
-              onPress={() => navigation.navigate("SpotDetails", { spot: item })}
-              style={styles.card}
-            >
+            <TouchableOpacity onPress={() => handlePress(item)} style={styles.card}>
               <Image source={imageSource} style={styles.image} />
               <View style={styles.cardContent}>
                 <Text style={styles.name}>{item.placeName}</Text>
               </View>
             </TouchableOpacity>
           );
+        }}
+      />
+      <Button
+        title="Borrar todos los favoritos"
+        onPress={async () => {
+          await AsyncStorage.removeItem("favoritos");
+          Alert.alert("Favoritos eliminados");
         }}
       />
     </View>
@@ -70,35 +120,19 @@ const { width } = Dimensions.get("window");
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
-    paddingHorizontal: 16,
-    paddingTop: 20,
-  },
-  centered: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 20,
+    padding: 16,
     backgroundColor: "#fff",
   },
   title: {
     fontSize: 22,
     fontWeight: "bold",
-    marginBottom: 20,
-    textAlign: "center",
-  },
-  emptyText: {
-    fontSize: 16,
-    color: "#666",
-    marginTop: 12,
-    textAlign: "center",
+    marginBottom: 16,
   },
   card: {
-    backgroundColor: "#f9f9f9",
-    borderRadius: 12,
     marginBottom: 16,
+    borderRadius: 12,
+    backgroundColor: "#f0f0f0",
     overflow: "hidden",
-    elevation: 2,
   },
   image: {
     width: width - 32,
@@ -108,8 +142,18 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   name: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#333",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  emptyText: {
+    marginTop: 10,
+    color: "#888",
+    fontSize: 16,
   },
 });

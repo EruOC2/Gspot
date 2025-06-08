@@ -29,24 +29,34 @@ export default function SpotDetailsScreen({ route }) {
   const { updateSpotLikes } = useContext(SpotContext);
 
   useEffect(() => {
-    const fetchSpot = async () => {
-      try {
-        const token = await AsyncStorage.getItem("token");
-        const id = spot?._id || spot?.id;
-        const res = await fetch(`http://192.168.0.33:3000/stories/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        setSpotData(data);
-        setLiked(data.likedBy?.includes(user?.email));
-      } catch (err) {
-        console.error("Error al cargar el spot:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSpot();
-  }, []);
+  const fetchSpot = async () => {
+    if (spot && spot.placeName) {
+      
+      setSpotData(spot);
+      setLiked(spot.likedBy?.includes(user?.email));
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const id = spot?._id || spot?.id;
+      const res = await fetch(`http://192.168.0.33:3000/stories/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setSpotData(data);
+      setLiked(data.likedBy?.includes(user?.email));
+    } catch (err) {
+      console.error("Error al cargar el spot:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchSpot();
+}, []);
+
 
   const toggleLike = async () => {
     try {

@@ -21,8 +21,7 @@ export default function ProfileScreen() {
   const navigation = useNavigation();
   const { logout, user } = useAuth();
   const { spots, refreshSpots } = useContext(SpotContext);
-  const { favorites } = useFavorites();
-
+  const { removeFromFavorites } = useFavorites();
   const [deletingId, setDeletingId] = useState(null);
 
   const mySpots = spots.filter((spot) => spot.user === user?.email);
@@ -32,6 +31,7 @@ export default function ProfileScreen() {
       setDeletingId(id);
       const token = await AsyncStorage.getItem("token");
       await deleteSpot(id, token);
+      removeFromFavorites({ _id: id }); // 🔄 eliminar también de favoritos
       await refreshSpots();
       setDeletingId(null);
       Alert.alert(" Eliminado", "El spot ha sido eliminado exitosamente");
@@ -171,4 +171,3 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 });
- 

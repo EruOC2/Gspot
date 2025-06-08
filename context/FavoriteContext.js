@@ -32,9 +32,27 @@ export const FavoriteProvider = ({ children }) => {
     return favorites.some((f) => f._id === spot._id);
   };
 
+  const forceCleanFavorites = async () => {
+    const valid = favorites.filter(
+      (item) =>
+        item &&
+        item._id &&
+        item.placeName &&
+        (item.image || item.imagePath)
+    );
+    setFavorites(valid);
+    await AsyncStorage.setItem("favoritos", JSON.stringify(valid));
+  };
+
   return (
     <FavoriteContext.Provider
-      value={{ favorites, addToFavorites, removeFromFavorites, isFavorite }}
+      value={{
+        favorites,
+        addToFavorites,
+        removeFromFavorites,
+        isFavorite,
+        forceCleanFavorites,
+      }}
     >
       {children}
     </FavoriteContext.Provider>
