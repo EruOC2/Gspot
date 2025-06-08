@@ -1,18 +1,22 @@
 import React from "react";
-import { createDrawerNavigator } from "@react-navigation/drawer";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { createDrawerNavigator } from "@react-navigation/drawer";
+import { useAuth } from "../../context/AuthContext";
+
 import BottomTabsNavigator from "./BottomTabsNavigator";
 import SpotDetailsScreen from "../screens/SpotDetailsScreen";
-import LogoutDrawer from "../screens/LogoutDrawer"; // Nuevo componente
+import LogoutDrawer from "../screens/LogoutDrawer";
+import LoginScreen from "../screens/LoginScreen";
+import RegisterScreen from "../screens/RegisterScreen";
 
-const Drawer = createDrawerNavigator();
 const Stack = createNativeStackNavigator();
+const Drawer = createDrawerNavigator();
 
-function DrawerWrapper() {
+function MainDrawer() {
   return (
     <Drawer.Navigator
       screenOptions={{
-        drawerPosition: "right", // 👉 Drawer desde la derecha
+        drawerPosition: "right",
         headerShown: false,
       }}
     >
@@ -23,18 +27,27 @@ function DrawerWrapper() {
 }
 
 export default function AppNavigator() {
+  const { isAuthenticated, checking } = useAuth();
+
+  if (checking) return null; // Puedes mostrar un spinner aquí
+
   return (
-    <Stack.Navigator>
-      <Stack.Screen
-        name="MainDrawer"
-        component={DrawerWrapper}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="SpotDetails"
-        component={SpotDetailsScreen}
-        options={{ title: "Detalles del Spot" }}
-      />
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      {!isAuthenticated ? (
+        <>
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+        </>
+      ) : (
+        <>
+          <Stack.Screen name="MainDrawer" component={MainDrawer} />
+          <Stack.Screen
+            name="SpotDetails"
+            component={SpotDetailsScreen}
+            options={{ title: "Detalles del Spot" }}
+          />
+        </>
+      )}
     </Stack.Navigator>
   );
 }

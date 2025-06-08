@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   View,
   Text,
@@ -8,59 +8,122 @@ import {
   TouchableOpacity,
   Linking,
   Dimensions,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import MapView, { Marker } from "react-native-maps";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { likeSpot } from "../api/api";
 import { useFavorites } from "../../context/FavoriteContext";
+import { useAuth } from "../../context/AuthContext";
+import { SpotContext } from "../../context/SpotContext";
 
 export default function SpotDetailsScreen({ route }) {
   const { spot } = route.params ?? {};
-
+  const [spotData, setSpotData] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [liked, setLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(spot?.likes || 0);
 
+  const { user } = useAuth();
   const { addToFavorites, removeFromFavorites, isFavorite } = useFavorites();
-  const favorited = isFavorite(spot);
+  const { updateSpotLikes } = useContext(SpotContext);
 
-  if (!spot) {
-    return (
-      <View style={styles.centered}>
-        <Text>Error: spot no disponible</Text>
-      </View>
-    );
-  }
+  useEffect(() => {
+    const fetchSpot = async () => {
+      try {
+        const token = await AsyncStorage.getItem("token");
+        const id = spot?._id || spot?.id;
+        const res = await fetch(`http://192.168.0.33:3000/stories/${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        setSpotData(data);
+        setLiked(data.likedBy?.includes(user?.email));
+      } catch (err) {
+        console.error("Error al cargar el spot:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSpot();
+  }, []);
 
-  const toggleLike = () => {
-    setLiked((prev) => !prev);
-    setLikeCount((prev) => (liked ? prev - 1 : prev + 1));
+  const toggleLike = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const id = spotData?._id;
+      const result = await likeSpot(id, token);
+
+      // Actualiza localmente en esta pantalla
+      const newLikedBy = result.liked
+        ? [...(spotData.likedBy || []), user?.email]
+        : (spotData.likedBy || []).filter((email) => email !== user?.email);
+
+      const updatedSpot = {
+        ...spotData,
+        likes: result.likes,
+        likedBy: newLikedBy,
+      };
+
+      setSpotData(updatedSpot);
+      setLiked(result.liked);
+
+      // Actualiza también el contexto global
+      updateSpotLikes(id, result.likes, user?.email);
+    } catch (err) {
+      Alert.alert("Error", "No se pudo dar/quitar like.");
+      console.error("Error al dar/quitar like:", err);
+    }
   };
 
   const toggleFavorite = () => {
-    if (favorited) {
-      removeFromFavorites(spot);
+    if (isFavorite(spotData)) {
+      removeFromFavorites(spotData);
     } else {
-      addToFavorites(spot);
+      addToFavorites(spotData);
     }
   };
 
   const openInMaps = () => {
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${spot.lat},${spot.lon}`;
+    const lat = spotData?.lat || spotData?.location?.latitude;
+    const lon = spotData?.lon || spotData?.location?.longitude;
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
     Linking.openURL(url);
   };
 
+  if (loading || !spotData) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#FF3366" />
+      </View>
+    );
+  }
+
+  const lat = spotData?.lat || spotData?.location?.latitude;
+  const lon = spotData?.lon || spotData?.location?.longitude;
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Image source={spot.image} style={styles.image} resizeMode="cover" />
+      <Image
+        source={{ uri: `http://192.168.0.33:3000/${spotData.imagePath}` }}
+        style={styles.image}
+        resizeMode="cover"
+      />
       <View style={styles.detailsContainer}>
-        <Text style={styles.placeName}>{spot.placeName}</Text>
-        <Text style={styles.location}>{spot.location}</Text>
+        <Text style={styles.placeName}>{spotData.placeName}</Text>
+        <Text style={styles.location}>
+          {lat && lon ? `Lat: ${lat}, Lon: ${lon}` : "Ubicación no disponible"}
+        </Text>
         <View style={styles.row}>
-          <Text style={styles.user}>Subido por: {spot.user}</Text>
-          <Text style={styles.date}>• 12/05/2025</Text>
+          <Text style={styles.user}>Subido por: {spotData.user}</Text>
+          <Text style={styles.date}>
+            • {new Date(spotData.createdAt).toLocaleDateString()}
+          </Text>
         </View>
 
-        {spot.tags && (
+        {spotData.tags && (
           <View style={styles.tagsContainer}>
-            {spot.tags.map((tag) => (
+            {spotData.tags.map((tag) => (
               <View key={tag} style={styles.tag}>
                 <Text style={styles.tagText}>#{tag}</Text>
               </View>
@@ -70,7 +133,7 @@ export default function SpotDetailsScreen({ route }) {
 
         <TouchableOpacity style={styles.likeButton} onPress={toggleLike}>
           <Text style={styles.likeText}>
-            {liked ? "❤️" : "💕"} {likeCount} Likes
+            {liked ? "❤️" : "💕"} {spotData.likes} Likes
           </Text>
         </TouchableOpacity>
 
@@ -79,29 +142,29 @@ export default function SpotDetailsScreen({ route }) {
           onPress={toggleFavorite}
         >
           <Text style={styles.likeText}>
-            {favorited ? "★ Guardado" : "☆ Guardar Spot"}
+            {isFavorite(spotData) ? "★ Guardado" : "☆ Guardar Spot"}
           </Text>
         </TouchableOpacity>
 
-        {spot.lat && spot.lon && (
+        {lat && lon && (
           <View style={styles.mapContainer}>
             <MapView
               style={styles.map}
               initialRegion={{
-                latitude: spot.lat,
-                longitude: spot.lon,
+                latitude: lat,
+                longitude: lon,
                 latitudeDelta: 0.005,
                 longitudeDelta: 0.005,
               }}
               scrollEnabled={false}
               zoomEnabled={false}
             >
-              <Marker coordinate={{ latitude: spot.lat, longitude: spot.lon }} />
+              <Marker coordinate={{ latitude: lat, longitude: lon }} />
             </MapView>
           </View>
         )}
 
-        {spot.lat && spot.lon && (
+        {lat && lon && (
           <TouchableOpacity style={styles.mapButton} onPress={openInMaps}>
             <Text style={styles.mapButtonText}>📍 Cómo llegar</Text>
           </TouchableOpacity>

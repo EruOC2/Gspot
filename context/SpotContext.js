@@ -1,50 +1,39 @@
-import React, { createContext, useState } from "react";
+import React, { createContext, useEffect, useState } from "react";
+import { fetchSpots } from "../app/api/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export const SpotContext = createContext();
 
 export const SpotProvider = ({ children }) => {
-  const [spots, setSpots] = useState([
-    {
-      id: "1",
-      image: require("../assets/mock_spot1.png"),
-      location: "Calle Roma 123, CDMX",
-      user: "@eruochoa",
-      placeName: "Muro graffiti Roma",
-      likes: 34,
-      liked: false,
-      saved: false,
-      lat: 19.417380,
-      lon: -99.162000,
-    },
-    {
-      id: "2",
-      image: require("../assets/mock_spot2.png"),
-      location: "Av. Insurgentes, CDMX",
-      user: "@eruochoa",
-      placeName: "Puente Insurgentes",
-      likes: 27,
-      liked: false,
-      saved: false,
-      lat: 19.441500,
-      lon: -99.159300,
-    },
-    {
-      id: "3",
-      image: require("../assets/mock_spot1.png"),
-      location: "Parque México, CDMX",
-      user: "@eruochoa",
-      placeName: "Parque México",
-      likes: 12,
-      liked: false,
-      saved: false,
-      lat: 19.412940,
-      lon: -99.173120,
-    },
-  ]);
+  const [spots, setSpots] = useState([]);
+
+  const refreshSpots = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const data = await fetchSpots();
+      const userEmail = parseJwt(token)?.email;
+
+      const formatted = data.map((spot) => ({
+        ...spot,
+        id: spot._id,
+        liked: spot.likedBy?.includes(userEmail),
+        saved: false,
+        image: { uri: `http://192.168.0.33:3000/${spot.imagePath}` },
+      }));
+
+      setSpots(formatted);
+    } catch (error) {
+      console.error("Error al cargar spots del backend:", error);
+    }
+  };
+
+  useEffect(() => {
+    refreshSpots();
+  }, []);
 
   const toggleLike = (id) => {
-    setSpots((prevSpots) =>
-      prevSpots.map((spot) =>
+    setSpots((prev) =>
+      prev.map((spot) =>
         spot.id === id
           ? {
               ...spot,
@@ -57,15 +46,59 @@ export const SpotProvider = ({ children }) => {
   };
 
   const toggleSave = (id) => {
-    setSpots((prevSpots) =>
-      prevSpots.map((spot) =>
+    setSpots((prev) =>
+      prev.map((spot) =>
         spot.id === id ? { ...spot, saved: !spot.saved } : spot
       )
     );
   };
 
+  const updateSpotLikes = (spotId, newLikes, userEmail) => {
+    setSpots((prev) =>
+      prev.map((spot) =>
+        spot.id === spotId
+          ? {
+              ...spot,
+              likes: newLikes,
+              likedBy: newLikes > spot.likes
+                ? [...(spot.likedBy || []), userEmail]
+                : (spot.likedBy || []).filter((email) => email !== userEmail),
+              liked: newLikes > spot.likes,
+            }
+          : spot
+      )
+    );
+  };
+
+  // Función auxiliar para extraer el email desde el token
+  const parseJwt = (token) => {
+    if (!token) return {};
+    try {
+      const base64Url = token.split(".")[1];
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split("")
+          .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+          .join("")
+      );
+      return JSON.parse(jsonPayload);
+    } catch (error) {
+      console.error("Error al decodificar token:", error);
+      return {};
+    }
+  };
+
   return (
-    <SpotContext.Provider value={{ spots, toggleLike, toggleSave }}>
+    <SpotContext.Provider
+      value={{
+        spots,
+        toggleLike,
+        toggleSave,
+        refreshSpots,
+        updateSpotLikes,
+      }}
+    >
       {children}
     </SpotContext.Provider>
   );

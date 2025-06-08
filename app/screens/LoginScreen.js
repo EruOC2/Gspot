@@ -2,11 +2,14 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../context/AuthContext';
+import { login } from '../api/api';
+import { useNavigation } from '@react-navigation/native';
 
-export default function LoginScreen({ navigation }) {
+export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { refresh } = useAuth();
+  const navigation = useNavigation();
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -14,23 +17,12 @@ export default function LoginScreen({ navigation }) {
     }
 
     try {
-      const response = await fetch('http://192.168.0.33:3000/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        await AsyncStorage.setItem('token', data.token);
-        refresh(); // actualiza el contexto con el nuevo token
-      } else {
-        Alert.alert('Error de inicio de sesión', data.message || 'Credenciales inválidas');
-      }
+      const data = await login(email, password);
+      await AsyncStorage.setItem('token', data.token);
+      refresh(); // actualiza el estado global
     } catch (error) {
-      console.error('Error al iniciar sesión:', error);
-      Alert.alert('Error del servidor', 'No se pudo conectar al servidor.');
+      console.error(error);
+      Alert.alert('Error al iniciar sesión', error.response?.data?.message || 'Credenciales inválidas');
     }
   };
 
@@ -66,4 +58,3 @@ const styles = StyleSheet.create({
   input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 10, marginBottom: 10 },
   link: { marginTop: 20, textAlign: 'center', color: 'blue' },
 });
-

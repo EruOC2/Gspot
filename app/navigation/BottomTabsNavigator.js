@@ -5,7 +5,8 @@ import { Ionicons } from "@expo/vector-icons";
 import HomeFeed from "../screens/HomeFeed";
 import UploadSpot from "../screens/UploadSpot";
 import ProfileScreen from "../screens/ProfileScreen";
-import MapScreen from "../screens/MapScreen"; // NUEVO
+import MapScreen from "../screens/MapScreen";
+import Favoritos from "../screens/Favoritos";
 
 const Tab = createBottomTabNavigator();
 
@@ -27,6 +28,8 @@ export default function BottomTabsNavigator() {
             iconName = focused ? "person" : "person-outline";
           } else if (route.name === "Mapa") {
             iconName = focused ? "map" : "map-outline";
+          } else if (route.name === "Favoritos") {
+            iconName = focused ? "heart" : "heart-outline";
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -35,7 +38,8 @@ export default function BottomTabsNavigator() {
     >
       <Tab.Screen name="Inicio" component={HomeFeed} />
       <Tab.Screen name="Subir" component={UploadSpot} />
-      <Tab.Screen name="Mapa" component={MapScreen} /> 
+      <Tab.Screen name="Mapa" component={MapScreen} />
+      <Tab.Screen name="Favoritos" component={Favoritos} />
       <Tab.Screen name="Perfil" component={ProfileScreen} />
     </Tab.Navigator>
   );

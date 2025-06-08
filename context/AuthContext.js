@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import decodeToken from '../app/utils/decodeToken'; // Ajusta si tu estructura es diferente
+import decodeToken from '../app/utils/decodeToken';
 
 const AuthContext = createContext();
 
@@ -41,7 +41,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, checking, logout, refresh: loadUser }}>
+    <AuthContext.Provider value={{ user, checking, isAuthenticated: !!user, logout, refresh: loadUser }}>
       {children}
     </AuthContext.Provider>
   );

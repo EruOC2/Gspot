@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import React, { useContext, useState } from "react";
 import {
   View,
   Text,
@@ -6,50 +6,92 @@ import {
   FlatList,
   Image,
   TouchableOpacity,
+  Button,
+  Alert,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
+import { useNavigation, DrawerActions } from "@react-navigation/native";
 import { SpotContext } from "../../context/SpotContext";
 import { useFavorites } from "../../context/FavoriteContext";
+import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "../../context/AuthContext";
+import { deleteSpot } from "../../app/api/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
-  const { spots } = useContext(SpotContext);
+  const { logout, user } = useAuth();
+  const { spots, refreshSpots } = useContext(SpotContext);
   const { favorites } = useFavorites();
 
-  const mySpots = spots.filter((spot) => spot.user === "@mockUser");
+  const [deletingId, setDeletingId] = useState(null);
+
+  const mySpots = spots.filter((spot) => spot.user === user?.email);
+
+  const handleDelete = async (id) => {
+    try {
+      setDeletingId(id);
+      const token = await AsyncStorage.getItem("token");
+      await deleteSpot(id, token);
+      await refreshSpots();
+      setDeletingId(null);
+      Alert.alert("✅ Eliminado", "El spot ha sido eliminado exitosamente");
+    } catch (err) {
+      setDeletingId(null);
+      console.error(err);
+      Alert.alert("Error", "No se pudo eliminar el spot");
+    }
+  };
+
+  const confirmDelete = (id) => {
+    Alert.alert(
+      "¿Eliminar spot?",
+      "Esta acción no se puede deshacer",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Eliminar", onPress: () => handleDelete(id), style: "destructive" },
+      ]
+    );
+  };
 
   const renderSpot = ({ item }) => (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => navigation.navigate("SpotDetails", { spot: item })}
-    >
-      <Image source={item.image} style={styles.image} />
-      <View style={styles.info}>
-        <Text style={styles.placeName}>{item.placeName}</Text>
-        <Text style={styles.location}>{item.location}</Text>
-      </View>
-    </TouchableOpacity>
+    <View style={styles.cardContainer}>
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => navigation.navigate("SpotDetails", { spot: item })}
+      >
+        <Image source={item.image} style={styles.image} />
+        <View style={styles.info}>
+          <Text style={styles.placeName}>{item.placeName}</Text>
+          <Text style={styles.location}>
+            {item.lat?.toFixed(3)}, {item.lon?.toFixed(3)}
+          </Text>
+        </View>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => confirmDelete(item.id)} style={styles.deleteButton}>
+        <Text style={styles.deleteText}>
+          {deletingId === item.id ? "Eliminando..." : "Eliminar"}
+        </Text>
+      </TouchableOpacity>
+    </View>
   );
 
   return (
     <View style={styles.container}>
-      {/* Botón de menú (Drawer) */}
       <TouchableOpacity
+        onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
         style={styles.menuButton}
-        onPress={() => navigation.openDrawer()}
       >
         <Ionicons name="menu" size={28} color="#333" />
       </TouchableOpacity>
 
-      <Text style={styles.username}>@mockUser</Text>
+      <Text style={styles.username}>{user?.email || "@mockUser"}</Text>
 
-      <TouchableOpacity
-        style={styles.favoritesButton}
+      <Button
+        title="Ver mis favoritos"
         onPress={() => navigation.navigate("Favoritos")}
-      >
-        <Text style={styles.favoritesText}>⭐ Ver mis favoritos</Text>
-      </TouchableOpacity>
+      />
+
+      <Button title="Cerrar sesión" onPress={logout} color="#FF3366" />
 
       <Text style={styles.sectionTitle}>Mis Spots</Text>
       {mySpots.length === 0 ? (
@@ -70,11 +112,10 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     backgroundColor: "#fff",
-    paddingTop: 60,
   },
   menuButton: {
     position: "absolute",
-    top: 40,
+    top: 20,
     right: 20,
     zIndex: 10,
   },
@@ -82,30 +123,22 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "bold",
     marginBottom: 10,
-  },
-  favoritesButton: {
-    backgroundColor: "#FF3366",
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginBottom: 20,
-    alignItems: "center",
-  },
-  favoritesText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
+    marginTop: 60,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
+    marginTop: 20,
     marginBottom: 10,
   },
   noSpots: {
     color: "#666",
   },
+  cardContainer: {
+    marginBottom: 12,
+  },
   card: {
     backgroundColor: "#f9f9f9",
-    marginBottom: 12,
     borderRadius: 10,
     overflow: "hidden",
     flexDirection: "row",
@@ -127,4 +160,15 @@ const styles = StyleSheet.create({
     color: "#666",
     marginTop: 4,
   },
+  deleteButton: {
+    backgroundColor: "#FFCCCC",
+    paddingVertical: 6,
+    borderRadius: 6,
+    marginTop: 4,
+  },
+  deleteText: {
+    color: "#FF3366",
+    textAlign: "center",
+  },
 });
+ 

@@ -1,13 +1,11 @@
 import React, { useContext } from "react";
 import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { SpotContext } from "../../context/SpotContext";
+import { SpotContext } from "../../context/SpotContext"; // ← Ruta corregida según estructura
 
-export default function SpotCard({ spotId }) {
+export default function SpotCard({ spot }) {
   const navigation = useNavigation();
-  const { spots, toggleLike } = useContext(SpotContext);
-
-  const spot = spots.find((s) => s.id === spotId);
+  const { toggleLike } = useContext(SpotContext);
 
   if (!spot) return null;
 
@@ -19,7 +17,7 @@ export default function SpotCard({ spotId }) {
       <Image source={spot.image} style={styles.image} />
       <View style={styles.info}>
         <Text style={styles.placeName}>{spot.placeName}</Text>
-        <Text style={styles.location}>{spot.location}</Text>
+        <Text style={styles.location}>{spot.location || "Ubicación no disponible"}</Text>
 
         <View style={styles.likeRow}>
           <TouchableOpacity onPress={() => toggleLike(spot.id)}>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,10 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { uploadStory } from "../api/api";
+import { useAuth } from "../../context/AuthContext";
+import { SpotContext } from "../../context/SpotContext"; // ✅ Importar contexto
 
 export default function UploadSpot() {
   const [image, setImage] = useState(null);
@@ -21,14 +25,15 @@ export default function UploadSpot() {
   const [tags, setTags] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const { refreshSpots } = useContext(SpotContext); // ✅ Usar contexto
 
   const navigation = useNavigation();
+  const { user } = useAuth();
 
   useEffect(() => {
     (async () => {
       const cameraStatus = await ImagePicker.requestCameraPermissionsAsync();
       const locationStatus = await Location.requestForegroundPermissionsAsync();
-
       if (
         cameraStatus.status !== "granted" ||
         locationStatus.status !== "granted"
@@ -50,22 +55,10 @@ export default function UploadSpot() {
       });
 
       if (!result.canceled) {
-        const imageUri = result.assets[0].uri;
-        setImage(imageUri);
-
+        const pickedImage = result.assets[0];
+        setImage(pickedImage);
         const loc = await Location.getCurrentPositionAsync({});
         setLocation(loc.coords);
-
-        const [geo] = await Location.reverseGeocodeAsync({
-          latitude: loc.coords.latitude,
-          longitude: loc.coords.longitude,
-        });
-
-        if (geo) {
-          const fullAddress = `${geo.name || ""}, ${geo.street || ""}, ${geo.city || geo.region || ""}`;
-          const coordsLabel = `Lat: ${loc.coords.latitude.toFixed(6)}, Lon: ${loc.coords.longitude.toFixed(6)}`;
-          setPlaceName(`${fullAddress} (${coordsLabel})`);
-        }
       }
     } catch (err) {
       Alert.alert("Error", "No se pudo obtener la imagen o la ubicación.");
@@ -83,40 +76,47 @@ export default function UploadSpot() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validate()) return;
+    try {
+      setLoading(true);
+      const formData = new FormData();
+      formData.append("placeName", placeName);
+      formData.append("latitude", location.latitude.toString());
+      formData.append("longitude", location.longitude.toString());
+      formData.append("tags", tags);
 
-    const newSpot = {
-      id: Date.now().toString(),
-      image: { uri: image },
-      location: placeName, // dirección + coordenadas
-      lat: location.latitude,
-      lon: location.longitude,
-      placeName,
-      user: "@mockUser",
-      tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
-      likes: 0,
-    };
+      const fileName = image.uri.split("/").pop();
+      const fileType = fileName.split(".").pop();
+      formData.append("image", {
+        uri: image.uri,
+        name: fileName,
+        type: `image/${fileType}`,
+      });
 
-    console.log("Nuevo spot:", newSpot);
-    Alert.alert("¡Listo!", "Spot capturado (mock)");
+      const token = await AsyncStorage.getItem("token");
+      await uploadStory(formData, token);
 
-    // Reset
-    setImage(null);
-    setLocation(null);
-    setPlaceName("");
-    setTags("");
-    setErrors({});
+      await refreshSpots(); // ✅ Actualizar lista de spots
 
-    setTimeout(() => {
-      navigation.navigate("Inicio");
-    }, 1500);
+      Alert.alert("¡Listo!", "Spot subido correctamente");
+      setImage(null);
+      setLocation(null);
+      setPlaceName("");
+      setTags("");
+      setErrors({});
+      setTimeout(() => navigation.navigate("Inicio"), 1500);
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", "No se pudo subir el spot.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Subir nuevo Spot</Text>
-
       <TouchableOpacity
         onPress={pickImage}
         style={styles.imagePicker}
@@ -125,36 +125,32 @@ export default function UploadSpot() {
         {loading ? (
           <ActivityIndicator size="large" color="#FF3366" />
         ) : image ? (
-          <Image source={{ uri: image }} style={styles.image} />
+          <Image source={{ uri: image.uri }} style={styles.image} />
         ) : (
           <Text style={styles.imageText}>Toca para tomar una foto</Text>
         )}
       </TouchableOpacity>
       {errors.image && <Text style={styles.error}>{errors.image}</Text>}
-
       <TextInput
         placeholder="Nombre del lugar"
-        style={[
-          styles.input,
-          errors.placeName && { borderColor: "red", borderWidth: 1 },
-        ]}
+        style={[styles.input, errors.placeName && { borderColor: "red" }]}
         value={placeName}
         onChangeText={(text) => {
           setPlaceName(text);
           if (errors.placeName) setErrors({ ...errors, placeName: null });
         }}
       />
-      {errors.placeName && <Text style={styles.error}>{errors.placeName}</Text>}
-
+      {errors.placeName && (
+        <Text style={styles.error}>{errors.placeName}</Text>
+      )}
       <TextInput
         placeholder="Tags separados por comas (ej: urbano, graffiti)"
         style={styles.input}
         value={tags}
         onChangeText={setTags}
       />
-
       <Button
-        title={loading ? "Cargando..." : "Subir Spot"}
+        title={loading ? "Subiendo..." : "Subir Spot"}
         onPress={handleSubmit}
         disabled={loading}
       />
@@ -163,16 +159,8 @@ export default function UploadSpot() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 20,
-  },
+  container: { padding: 20, flex: 1, backgroundColor: "#fff" },
+  title: { fontSize: 22, fontWeight: "bold", marginBottom: 20 },
   imagePicker: {
     height: 200,
     backgroundColor: "#f0f0f0",
@@ -181,23 +169,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 10,
   },
-  imageText: {
-    color: "#999",
-  },
-  image: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 12,
-  },
+  imageText: { color: "#999" },
+  image: { width: "100%", height: "100%", borderRadius: 12 },
   input: {
     backgroundColor: "#f9f9f9",
     borderRadius: 8,
     padding: 10,
     marginBottom: 10,
   },
-  error: {
-    color: "red",
-    fontSize: 13,
-    marginBottom: 8,
-  },
+  error: { color: "red", fontSize: 13, marginBottom: 8 },
 });
